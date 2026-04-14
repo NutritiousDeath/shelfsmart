@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
+import { ProductEntity, FlashSaleEntity } from '@/hooks/useEntities';;
 import { Zap, RefreshCw, Check, X, Sparkles, Tag, Clock } from "lucide-react";
 import { differenceInDays } from "date-fns";
 
@@ -20,14 +21,14 @@ export default function FlashSales() {
 
   useEffect(() => {
     loadData();
-    base44.auth.me().then(setUser);
+    supabase.auth.getUser().then(({data}) => setUser(data.user));
   }, []);
 
   const loadData = async () => {
     setLoading(true);
     const [s, p] = await Promise.all([
-      base44.entities.FlashSale.list("-created_date"),
-      base44.entities.Product.list(),
+      FlashSaleEntity.list("-created_date"),
+      ProductEntity.list(),
     ]);
     setSales(s);
     setProducts(p);
@@ -104,7 +105,7 @@ Return a JSON array of flash sale suggestions.`,
       const discount = Math.min(Math.max(s.discount_percent, 5), 70);
       const salePrice = +(prod.retail_price * (1 - discount / 100)).toFixed(2);
 
-      await base44.entities.FlashSale.create({
+      await FlashSaleEntity.create({
         product_id: prod.id,
         product_name: prod.name,
         original_price: prod.retail_price,
@@ -123,13 +124,13 @@ Return a JSON array of flash sale suggestions.`,
   };
 
   const updateStatus = async (id, newStatus) => {
-    await base44.entities.FlashSale.update(id, { status: newStatus });
+    await FlashSaleEntity.update(id, { status: newStatus });
     setSales(sales.map(s => s.id === id ? { ...s, status: newStatus } : s));
   };
 
   const deleteSale = async (id) => {
     if (!confirm("Delete this flash sale?")) return;
-    await base44.entities.FlashSale.delete(id);
+    await FlashSaleEntity.delete(id);
     setSales(sales.filter(s => s.id !== id));
   };
 
