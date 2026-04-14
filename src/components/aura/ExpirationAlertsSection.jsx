@@ -1,163 +1,117 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { supabase } from "@/api/supabaseClient";
-import { Send, User, Package, AlertTriangle, Zap, ShoppingCart, RefreshCw } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import { AlertTriangle, RefreshCw, CheckCircle } from "lucide-react";
 
-export default function AuraChatSection() {
-  const [messages, setMessages] = useState([
-    { role: "assistant", content: "Hi! I'm AuraAI — your intelligent store assistant. I have full visibility into your inventory, orders, and flash sales. How can I help you today?" }
-  ]);
-  const [input, setInput] = useState("");
+const urgencyStyle = {
+  HIGH: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
+  MEDIUM: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
+  LOW: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+};
+
+const actionStyle = {
+  FLASH_SALE: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
+  MARKDOWN: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+  REMOVE: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
+  MONITOR: "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300",
+};
+
+export default function ExpirationAlertsSection() {
   const [loading, setLoading] = useState(false);
-  const [storeContext, setStoreContext] = useState(null);
-  const [user, setUser] = useState(null);
-  const bottomRef = useRef(null);
+  const [result, setResult] = useState(null);
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({data}) => setUser(data.user)).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const sendMessage = async () => {
-    const text = input.trim();
-    if (!text || loading) return;
-
-    const newMessages = [...messages, { role: "user", content: text }];
-    setMessages(newMessages);
-    setInput("");
+  const check = async () => {
     setLoading(true);
-
-    const history = newMessages.slice(-8).map(m => ({ role: m.role, content: m.content }));
-
+    setResult(null);
     const res = await Promise.resolve({ data: {} }) /* TODO: replace with Railway endpoint */;
-
-    const data = res.data;
-    if (data?.store_context) setStoreContext(data.store_context);
-
-    setMessages(prev => [
-      ...prev,
-      { role: "assistant", content: data?.response || "Sorry, I couldn't process that." }
-    ]);
+    setResult(res.data);
     setLoading(false);
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
-
-  const contextStats = storeContext ? [
-    { label: "Low Stock", value: storeContext.low_stock_count, icon: Package, color: "text-amber-500" },
-    { label: "Expiring Soon", value: storeContext.expiring_count, icon: AlertTriangle, color: "text-red-500" },
-    { label: "Active Sales", value: storeContext.active_flash_sales, icon: Zap, color: "text-purple-500" },
-    { label: "Draft Orders", value: storeContext.draft_orders, icon: ShoppingCart, color: "text-blue-500" },
-  ] : null;
-
   return (
     <div className="space-y-4">
-      {/* Store Context Stats */}
-      {contextStats && (
-        <div className="grid grid-cols-4 gap-3">
-          {contextStats.map((stat, i) => {
-            const Icon = stat.icon;
-            return (
-              <div key={i} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-3 text-center">
-                <Icon className={`w-4 h-4 mx-auto mb-1 ${stat.color}`} />
-                <p className="text-xl font-bold text-slate-800 dark:text-slate-100">{stat.value}</p>
-                <p className="text-xs text-slate-400">{stat.label}</p>
-              </div>
-            );
-          })}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-500" />
+            <h2 className="font-semibold text-slate-800 dark:text-slate-100">Expiration Alerts</h2>
+          </div>
+          <button
+            onClick={check}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold rounded-xl text-sm transition-colors disabled:opacity-60"
+          >
+            {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <AlertTriangle className="w-4 h-4" />}
+            {loading ? "Checking..." : "Check Expiration Alerts"}
+          </button>
+        </div>
+        <p className="text-slate-500 text-sm">AI scans products expiring within 7 days and recommends actions to minimize waste.</p>
+      </div>
+
+      {loading && (
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-10 flex flex-col items-center gap-3">
+          <RefreshCw className="w-8 h-8 text-amber-400 animate-spin" />
+          <p className="text-slate-500 text-sm">AuraAI is scanning expiration dates...</p>
         </div>
       )}
 
-      {/* Chat Window */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col" style={{ height: "520px" }}>
-        {/* Chat Header */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-700">
-          <img src="/shelfsmart/aura-logo.png" alt="AuraAI" className="w-8 h-8 rounded-full object-cover" />
-          <div>
-            <p className="font-semibold text-slate-800 dark:text-slate-100 text-sm">AuraAI</p>
-            <p className="text-xs text-green-500 font-medium">● Online</p>
-          </div>
-        </div>
-
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {messages.map((msg, i) => (
-            <div key={i} className={`flex gap-2.5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-              {msg.role === "assistant" && (
-                <img src="/shelfsmart/aura-logo.png" alt="AuraAI" className="w-7 h-7 rounded-full object-cover flex-shrink-0 mt-0.5" />
-              )}
-              <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm ${
-                msg.role === "user"
-                  ? "bg-slate-800 dark:bg-slate-600 text-white rounded-tr-sm"
-                  : "bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-tl-sm"
-              }`}>
-                {msg.role === "assistant" ? (
-                  <ReactMarkdown
-                    className="prose prose-sm max-w-none dark:prose-invert [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
-                    components={{
-                      p: ({ children }) => <p className="my-0.5 leading-relaxed">{children}</p>,
-                      ul: ({ children }) => <ul className="my-1 ml-4 list-disc">{children}</ul>,
-                      li: ({ children }) => <li className="my-0.5">{children}</li>,
-                    }}
-                  >
-                    {msg.content}
-                  </ReactMarkdown>
-                ) : (
-                  <p>{msg.content}</p>
-                )}
-              </div>
-              {msg.role === "user" && (
-                <div className="w-7 h-7 bg-slate-200 dark:bg-slate-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <User className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
-                </div>
+      {result && !loading && (
+        <div className="space-y-4">
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-2xl p-4 flex items-start gap-3">
+            <CheckCircle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-slate-800 dark:text-slate-100 font-medium text-sm">{result.message || result.summary}</p>
+              {result.flash_sales_created > 0 && (
+                <p className="text-amber-700 dark:text-amber-300 text-xs mt-1 font-medium">
+                  ✓ {result.flash_sales_created} flash sale suggestion{result.flash_sales_created !== 1 ? "s" : ""} created
+                </p>
               )}
             </div>
-          ))}
+          </div>
 
-          {loading && (
-            <div className="flex gap-2.5 justify-start">
-              <img src="/shelfsmart/aura-logo.png" alt="AuraAI" className="w-7 h-7 rounded-full object-cover flex-shrink-0 mt-0.5" />
-              <div className="bg-slate-100 dark:bg-slate-700 px-4 py-3 rounded-2xl rounded-tl-sm flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+          {result.alerts?.length > 0 && (
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700">
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Product</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Exp. Date</th>
+                      <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Days Left</th>
+                      <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Action</th>
+                      <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Urgency</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
+                    {result.alerts.map((alert, i) => (
+                      <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                        <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">{alert.product_name}</td>
+                        <td className="px-4 py-3 text-slate-600 dark:text-slate-300 font-mono text-xs">{alert.expiration_date}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`font-bold text-sm ${alert.days_until_expiry <= 0 ? "text-red-600" : alert.days_until_expiry <= 3 ? "text-red-500" : "text-amber-600"}`}>
+                            {alert.days_until_expiry <= 0 ? "EXPIRED" : `${alert.days_until_expiry}d`}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`text-xs font-bold px-2 py-1 rounded-full ${actionStyle[alert.action] || actionStyle.MONITOR}`}>
+                            {alert.action}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${urgencyStyle[alert.urgency] || urgencyStyle.LOW}`}>
+                            {alert.urgency}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">{alert.reason}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
-          <div ref={bottomRef} />
         </div>
-
-        {/* Input */}
-        <div className="p-3 border-t border-slate-100 dark:border-slate-700">
-          <div className="flex items-end gap-2">
-            <textarea
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask AuraAI anything about your store..."
-              rows={1}
-              className="flex-1 px-3 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-300 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400"
-              style={{ maxHeight: "100px", overflowY: "auto" }}
-            />
-            <button
-              onClick={sendMessage}
-              disabled={!input.trim() || loading}
-              className="p-2.5 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-            >
-              {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            </button>
-          </div>
-          <p className="text-xs text-slate-400 mt-1.5 px-1">Press Enter to send · Shift+Enter for new line</p>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
