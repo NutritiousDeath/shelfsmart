@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { RefreshCw, AlertTriangle } from "lucide-react";
 import DairyStatCards from "../components/dairy/DairyStatCards";
 import DairyAlertModal from "../components/dairy/DairyAlertModal";
@@ -9,7 +9,7 @@ import DairyOrderHistory from "../components/dairy/DairyOrderHistory";
 
 const TABS = ["milk", "cheese", "yogurt", "butter", "cream", "eggs"];
 const TAB_LABELS = { milk: "Milk", cheese: "Cheese", yogurt: "Yogurt", butter: "Butter", cream: "Cream", eggs: "Eggs" };
-const AURA_IMG = "https://base44.app/api/apps/69a77277eaf49e3b35ab5e60/files/public/69a77277eaf49e3b35ab5e60/42ce75fbe_ChatGPTImageMar5202611_35_11PM.png";
+const AURA_IMG = "/shelfsmart/aura-logo.png";
 const ALERT_ROLES = ["store_director", "assistant_store_director", "manager", "admin"];
 const DISMISS_KEY = "dairy_alert_dismissed_date";
 
@@ -33,13 +33,13 @@ export default function DairyDashboard() {
 
   const runCheck = useCallback(async () => {
     setLoading(true);
-    const res = await base44.functions.invoke("dairyExpirationCheck", {});
+    const res = await Promise.resolve({ data: {} }) /* TODO: replace with Railway endpoint */;
     setData(res.data);
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    base44.auth.me().then(setUser);
+    supabase.auth.getUser().then(({data}) => setUser(data.user));
     runCheck();
   }, []);
 
