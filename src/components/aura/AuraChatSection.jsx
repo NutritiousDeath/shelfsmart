@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { Send, User, Package, AlertTriangle, Zap, ShoppingCart, RefreshCw } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
@@ -14,7 +14,7 @@ export default function AuraChatSection() {
   const bottomRef = useRef(null);
 
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
+    supabase.auth.getUser().then(({data}) => setUser(data.user)).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -32,11 +32,7 @@ export default function AuraChatSection() {
 
     const history = newMessages.slice(-8).map(m => ({ role: m.role, content: m.content }));
 
-    const res = await base44.functions.invoke("aiChat", {
-      message: text,
-      userId: user?.id,
-      conversationHistory: history,
-    });
+    const res = await Promise.resolve({ data: {} }) /* TODO: replace with Railway endpoint */;
 
     const data = res.data;
     if (data?.store_context) setStoreContext(data.store_context);
@@ -84,7 +80,7 @@ export default function AuraChatSection() {
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col" style={{ height: "520px" }}>
         {/* Chat Header */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-700">
-          <img src="https://base44.app/api/apps/69a77277eaf49e3b35ab5e60/files/public/69a77277eaf49e3b35ab5e60/42ce75fbe_ChatGPTImageMar5202611_35_11PM.png" alt="AuraAI" className="w-8 h-8 rounded-full object-cover" />
+          <img src="/shelfsmart/aura-logo.png" alt="AuraAI" className="w-8 h-8 rounded-full object-cover" />
           <div>
             <p className="font-semibold text-slate-800 dark:text-slate-100 text-sm">AuraAI</p>
             <p className="text-xs text-green-500 font-medium">● Online</p>
@@ -96,7 +92,7 @@ export default function AuraChatSection() {
           {messages.map((msg, i) => (
             <div key={i} className={`flex gap-2.5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
               {msg.role === "assistant" && (
-                <img src="https://base44.app/api/apps/69a77277eaf49e3b35ab5e60/files/public/69a77277eaf49e3b35ab5e60/42ce75fbe_ChatGPTImageMar5202611_35_11PM.png" alt="AuraAI" className="w-7 h-7 rounded-full object-cover flex-shrink-0 mt-0.5" />
+                <img src="/shelfsmart/aura-logo.png" alt="AuraAI" className="w-7 h-7 rounded-full object-cover flex-shrink-0 mt-0.5" />
               )}
               <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm ${
                 msg.role === "user"
@@ -128,7 +124,7 @@ export default function AuraChatSection() {
 
           {loading && (
             <div className="flex gap-2.5 justify-start">
-              <img src="https://base44.app/api/apps/69a77277eaf49e3b35ab5e60/files/public/69a77277eaf49e3b35ab5e60/42ce75fbe_ChatGPTImageMar5202611_35_11PM.png" alt="AuraAI" className="w-7 h-7 rounded-full object-cover flex-shrink-0 mt-0.5" />
+              <img src="/shelfsmart/aura-logo.png" alt="AuraAI" className="w-7 h-7 rounded-full object-cover flex-shrink-0 mt-0.5" />
               <div className="bg-slate-100 dark:bg-slate-700 px-4 py-3 rounded-2xl rounded-tl-sm flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
                 <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
