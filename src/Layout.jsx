@@ -24,6 +24,7 @@ const navItems = [
 
 export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [darkMode, setDarkMode] = useState(() => {
@@ -32,18 +33,28 @@ export default function Layout({ children, currentPageName }) {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const topLevelPages = ["Dashboard", "Inventory", "Scanner", "Orders", "Settings", "Calendar", "FlashSales", "AuraAI"];
+  const topLevelPages = ["Dashboard", "Inventory", "Scanner", "Orders", "Settings", "Calendar", "FlashSales", "AuraAI", "DairyDashboard"];
   const isTopLevel = topLevelPages.includes(currentPageName);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({data}) => data.user).then(u => {
-      setUser(u);
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) {
+        setUser(data.user);
+        // Load team member profile for role
+        supabase
+          .from('team_members')
+          .select('*')
+          .eq('email', data.user.email)
+          .single()
+          .then(({ data: member }) => {
+            if (member) setProfile(member);
+          });
+      }
       setLoading(false);
     }).catch(() => {
-      window.location.href = "/";
+      setLoading(false);
     });
 
-    // Sync dark class on html element
     if (darkMode) {
       document.documentElement.classList.add("dark");
     } else {
@@ -51,7 +62,6 @@ export default function Layout({ children, currentPageName }) {
     }
   }, [darkMode]);
 
-  // Listen for dark mode changes from Settings page
   useEffect(() => {
     const observer = new MutationObserver(() => {
       setDarkMode(document.documentElement.classList.contains("dark"));
@@ -62,8 +72,10 @@ export default function Layout({ children, currentPageName }) {
 
   const handleLogout = () => supabase.auth.signOut().then(() => window.location.href = "/");
 
+  const userRole = profile?.role || "employee";
+
   const visibleNav = navItems.filter(item =>
-    !user || item.roles.includes(user.role || "employee")
+    item.roles.includes(userRole)
   );
 
   if (loading) {
@@ -79,32 +91,27 @@ export default function Layout({ children, currentPageName }) {
 
   return (
     <div className={`h-screen flex overflow-hidden bg-slate-50 dark:bg-slate-950`}>
-      {/* Mobile overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/50 z-20 lg:hidden select-none" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Bottom Tab Bar */}
       <BottomTabBar />
 
-      {/* Sidebar */}
       <aside className={`fixed left-0 top-0 h-full w-64 dark:bg-slate-800 bg-slate-900 z-30 flex flex-col transition-transform duration-300 ${
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
       } lg:translate-x-0 lg:static lg:z-auto safe-area-inset-left`}>
-        {/* Logo */}
         <div className="p-5 border-b border-slate-700/50">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-amber-400 rounded-xl flex items-center justify-center">
               <Boxes className="w-7 h-7 text-slate-900" />
             </div>
             <div>
-              <p className="text-white font-bold text-sm leading-tight">StockSense</p>
+              <p className="text-white font-bold text-sm leading-tight">ShelfSmart</p>
               <p className="text-slate-400 text-xs">Inventory Manager</p>
             </div>
           </div>
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {visibleNav.map(item => {
             const Icon = item.icon;
@@ -127,15 +134,14 @@ export default function Layout({ children, currentPageName }) {
           })}
         </nav>
 
-        {/* User */}
         <div className="p-4 border-t border-slate-700/50">
           <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-slate-800">
             <div className="w-8 h-8 bg-amber-400/20 rounded-full flex items-center justify-center">
               <User className="w-4 h-4 text-amber-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white text-xs font-medium truncate">{user?.full_name || "User"}</p>
-              <p className="text-amber-400 text-xs capitalize">{user?.role === "admin" ? "manager" : (user?.role || "employee")}</p>
+              <p className="text-white text-xs font-medium truncate">{profile?.full_name || user?.email || "User"}</p>
+              <p className="text-amber-400 text-xs capitalize">{userRole}</p>
             </div>
             <button onClick={handleLogout} className="text-slate-500 hover:text-red-400 transition-colors select-none">
               <LogOut className="w-4 h-4" />
@@ -144,9 +150,7 @@ export default function Layout({ children, currentPageName }) {
         </div>
       </aside>
 
-      {/* Main */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0 lg:ml-0">
-        {/* Top bar */}
         <header className="dark:bg-slate-900 dark:border-slate-700 bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-4 sticky top-0 z-10 safe-area-inset-top">
           {!isTopLevel && (
             <button
@@ -167,20 +171,19 @@ export default function Layout({ children, currentPageName }) {
           </h1>
           <div className="flex items-center gap-2">
             <span className={`text-xs px-2.5 py-1 rounded-full font-medium select-none ${
-              user?.role === "store_director" ? "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-200" :
-              user?.role === "assistant_store_director" ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" :
-              user?.role === "manager" || user?.role === "admin"
+              userRole === "store_director" ? "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-200" :
+              userRole === "assistant_store_director" ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" :
+              userRole === "manager" || userRole === "admin"
                 ? "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-200"
                 : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
             }`}>
-              {user?.role === "store_director" ? "Store Director" :
-               user?.role === "assistant_store_director" ? "Asst. Store Director" :
-               user?.role === "manager" || user?.role === "admin" ? "Manager" : "Employee"}
+              {userRole === "store_director" ? "Store Director" :
+               userRole === "assistant_store_director" ? "Asst. Store Director" :
+               userRole === "manager" || userRole === "admin" ? "Manager" : "Employee"}
             </span>
           </div>
         </header>
 
-        {/* Page content */}
         <main className="flex-1 overflow-y-auto overscroll-y-contain min-h-0 pb-20 lg:pb-0">
           <motion.div
             key={location.pathname}
