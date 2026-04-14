@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
+import { OrderEntity } from '@/hooks/useEntities';;
 import { ShoppingCart } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 
@@ -25,7 +26,7 @@ export default function DairyOrderHistory({ dairySuppliers }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    base44.entities.Order.list("-created_date", 100).then(all => {
+    OrderEntity.list("-created_date", 100).then(all => {
       const filtered = dairySuppliers.length > 0
         ? all.filter(o => dairySuppliers.includes(o.supplier))
         : all.slice(0, 10);
