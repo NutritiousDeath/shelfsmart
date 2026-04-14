@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { ShoppingCart, RefreshCw, Package, CheckCircle } from "lucide-react";
 
 const priorityStyle = {
@@ -15,7 +15,7 @@ export default function ReorderGuideSection() {
   const generate = async () => {
     setLoading(true);
     setResult(null);
-    const res = await base44.functions.invoke("aiReorderGuide", {});
+    const res = await Promise.resolve({ data: {} }) /* TODO: replace with Railway endpoint */;
     setResult(res.data);
     setLoading(false);
   };
