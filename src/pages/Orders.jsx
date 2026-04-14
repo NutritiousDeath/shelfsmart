@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
+import { ProductEntity, OrderEntity } from '@/hooks/useEntities';;
 import { ShoppingCart, Plus, RefreshCw, Sparkles, Package, Truck, Check, X, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import OrderModal from "../components/orders/OrderModal";
 import OrderSheet from "../components/mobile/OrderSheet";
@@ -34,8 +35,8 @@ export default function Orders() {
   const loadData = async () => {
     setLoading(true);
     const [o, p] = await Promise.all([
-      base44.entities.Order.list("-created_date"),
-      base44.entities.Product.list(),
+      OrderEntity.list("-created_date"),
+      ProductEntity.list(),
     ]);
     setOrders(o);
     setProducts(p);
@@ -54,19 +55,7 @@ export default function Orders() {
       return;
     }
 
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are an inventory ordering AI assistant. Analyze these low-stock products and generate a reorder suggestion.
-
-Low stock items:
-${JSON.stringify(lowStock.map(p => ({
-  id: p.id,
-  name: p.name,
-  quantity_on_hand: p.quantity_on_hand,
-  min_stock_level: p.min_stock_level,
-  unit_cost: p.unit_cost,
-  supplier: p.supplier,
-  category: p.category,
-})), null, 2)}
+    const result = null /* TODO: replace with Railway AI endpoint */), null, 2)}
 
 Create a reorder list grouped by supplier. For each item, suggest a reorder quantity (typically 2-4x the min_stock_level).
 Group items by their supplier field. If supplier is missing, use "General Supplier".`,
@@ -103,7 +92,7 @@ Group items by their supplier field. If supplier is missing, use "General Suppli
       const total = order.items.reduce((sum, i) => sum + (i.quantity * (i.unit_cost || 0)), 0);
       const today = new Date();
       const delivery = new Date(today); delivery.setDate(today.getDate() + 7);
-      await base44.entities.Order.create({
+      await OrderEntity.create({
         supplier: order.supplier,
         status: "draft",
         items: order.items,
@@ -119,7 +108,7 @@ Group items by their supplier field. If supplier is missing, use "General Suppli
 
   const removeOrder = async (orderId) => {
     if (!confirm("Remove this order? This cannot be undone.")) return;
-    await base44.entities.Order.delete(orderId);
+    await OrderEntity.delete(orderId);
     setOrders(orders.filter(o => o.id !== orderId));
   };
 
@@ -135,10 +124,10 @@ Group items by their supplier field. If supplier is missing, use "General Suppli
         const newQty = prod.quantity_on_hand + item.quantity;
         let newStatus = "in_stock";
         if (newQty <= prod.min_stock_level) newStatus = "low_stock";
-        await base44.entities.Product.update(item.product_id, { quantity_on_hand: newQty, status: newStatus });
+        await ProductEntity.update(item.product_id, { quantity_on_hand: newQty, status: newStatus });
       }
     }
-    await base44.entities.Order.update(order.id, { status: next });
+    await OrderEntity.update(order.id, { status: next });
     loadData();
   };
 
@@ -151,10 +140,10 @@ Group items by their supplier field. If supplier is missing, use "General Suppli
         // Optimistic update
         const updatedOrder = { ...editing, ...newOrder };
         setOrders(orders.map(o => o.id === editing.id ? updatedOrder : o));
-        await base44.entities.Order.update(editing.id, newOrder);
+        await OrderEntity.update(editing.id, newOrder);
       } else {
         // Optimistic add
-        const created = await base44.entities.Order.create(newOrder);
+        const created = await OrderEntity.create(newOrder);
         setOrders([created, ...orders]);
       }
     } catch (err) {
