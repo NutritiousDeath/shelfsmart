@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
+import { ProductEntity } from '@/hooks/useEntities';;
 import { Plus, Search, Filter, Package, Edit2, Trash2, ChevronDown } from "lucide-react";
 import ProductModal from "../components/inventory/ProductModal";
 import ProductSheet from "../components/mobile/ProductSheet";
@@ -21,12 +22,12 @@ export default function Inventory() {
 
   useEffect(() => {
     loadProducts();
-    base44.auth.me().then(setUser);
+    supabase.auth.getUser().then(({data}) => setUser(data.user));
   }, []);
 
   const loadProducts = async () => {
     setLoading(true);
-    const data = await base44.entities.Product.list("-updated_date");
+    const data = await ProductEntity.list("-updated_date");
     setProducts(data);
     setLoading(false);
   };
@@ -42,9 +43,9 @@ export default function Inventory() {
     if (editing) {
       const updatedProduct = { ...editing, ...newProduct };
       setProducts(products.map(p => p.id === editing.id ? updatedProduct : p));
-      await base44.entities.Product.update(editing.id, newProduct);
+      await ProductEntity.update(editing.id, newProduct);
     } else {
-      const created = await base44.entities.Product.create(newProduct);
+      const created = await ProductEntity.create(newProduct);
       setProducts([created, ...products]);
     }
     setShowModal(false);
@@ -53,7 +54,7 @@ export default function Inventory() {
 
   const handleDelete = async (id) => {
     if (!confirm("Delete this product?")) return;
-    await base44.entities.Product.delete(id);
+    await ProductEntity.delete(id);
     loadProducts();
   };
 
