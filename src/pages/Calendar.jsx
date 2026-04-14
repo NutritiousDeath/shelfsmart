@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
+import { OrderEntity, FlashSaleEntity, ProductEntity } from "@/hooks/useEntities";
 import { differenceInDays, format } from "date-fns";
 import { RefreshCw, CalendarDays, Plus, Upload, CheckCircle } from "lucide-react";
 import CalendarGrid from "../components/calendar/CalendarGrid";
@@ -24,14 +25,13 @@ export default function CalendarPage() {
   const loadLocalEvents = async () => {
     setLoading(true);
     const [orders, flashSales, products] = await Promise.all([
-      base44.entities.Order.list(),
-      base44.entities.FlashSale.list(),
-      base44.entities.Product.list(),
+      OrderEntity.list(),
+      FlashSaleEntity.list(),
+      ProductEntity.list(),
     ]);
 
     const ev = [];
 
-    // Order deliveries
     orders.forEach(o => {
       if (!o.expected_delivery || o.status === "cancelled") return;
       ev.push({
@@ -42,7 +42,6 @@ export default function CalendarPage() {
       });
     });
 
-    // Flash sales (start dates)
     flashSales.forEach(s => {
       if (!s.start_date || s.status === "ended") return;
       ev.push({
@@ -53,7 +52,6 @@ export default function CalendarPage() {
       });
     });
 
-    // Expiring products (7 days or less)
     const today = new Date();
     products.forEach(p => {
       if (!p.expiration_date) return;
@@ -79,26 +77,13 @@ export default function CalendarPage() {
   };
 
   const handleSyncToGoogle = async () => {
-    setSyncing(true);
-    const res = await base44.functions.invoke("calendarSync", { action: "push" });
-    const count = res?.data?.results?.length ?? 0;
-    setSyncCount(count);
-    setSyncing(false);
-    setSyncDone(true);
-    setTimeout(() => setSyncDone(false), 5000);
+    // Google Calendar sync requires a backend — coming soon via Railway
+    alert("Google Calendar sync will be available once the Railway backend endpoint is set up.");
   };
 
   const handleCreateEvent = async (e) => {
     e.preventDefault();
     setSaving(true);
-    await base44.functions.invoke("calendarSync", {
-      action: "create",
-      title: newEvent.title,
-      description: newEvent.description,
-      date: newEvent.date,
-      endDate: newEvent.endDate || newEvent.date,
-    });
-    // Also add to local display
     setEvents(prev => [...prev, {
       type: "custom",
       date: newEvent.date,
@@ -110,25 +95,11 @@ export default function CalendarPage() {
     setSaving(false);
   };
 
-  const syncToOutlook = () => {
-    // Outlook Web Add: uses the .ics export then opens Outlook import URL
-    const lines = buildICSLines();
-    const blob = new Blob([lines], { type: "text/calendar;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "stocksense-outlook.ics";
-    a.click();
-    URL.revokeObjectURL(url);
-    // Also open Outlook Web import page in a new tab for convenience
-    window.open("https://outlook.live.com/calendar/0/addevent", "_blank");
-  };
-
   const buildICSLines = () => {
     const lines = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
-      "PRODID:-//StockSense//Calendar//EN",
+      "PRODID:-//ShelfSmart//Calendar//EN",
       "CALSCALE:GREGORIAN",
       "METHOD:PUBLISH",
     ];
@@ -139,63 +110,56 @@ export default function CalendarPage() {
       lines.push(`DTEND;VALUE=DATE:${dateStr}`);
       lines.push(`SUMMARY:${ev.title}`);
       if (ev.description) lines.push(`DESCRIPTION:${ev.description.replace(/\n/g, "\\n")}`);
-      lines.push(`UID:stocksense-${dateStr}-${Math.random().toString(36).substr(2, 9)}`);
+      lines.push(`UID:shelfsmart-${dateStr}-${Math.random().toString(36).substr(2, 9)}`);
       lines.push("END:VEVENT");
     });
     lines.push("END:VCALENDAR");
     return lines.join("\r\n");
   };
 
-  const exportICS = () => {
-    const lines = [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//StockSense//Calendar//EN",
-      "CALSCALE:GREGORIAN",
-      "METHOD:PUBLISH",
-    ];
-
+  const syncToOutlook = () => {
     const blob = new Blob([buildICSLines()], { type: "text/calendar;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "stocksense-calendar.ics";
+    a.download = "shelfsmart-outlook.ics";
+    a.click();
+    URL.revokeObjectURL(url);
+    window.open("https://outlook.live.com/calendar/0/addevent", "_blank");
+  };
+
+  const exportICS = () => {
+    const blob = new Blob([buildICSLines()], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "shelfsmart-calendar.ics";
     a.click();
     URL.revokeObjectURL(url);
   };
 
   return (
     <div className="p-4 md:p-6 space-y-4">
-      {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Calendar</h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm">Orders, flash sales & expiry dates at a glance</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
-          <button
-            onClick={() => setShowNewEvent(!showNewEvent)}
-            className="flex items-center gap-2 px-3 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-          >
+          <button onClick={() => setShowNewEvent(!showNewEvent)}
+            className="flex items-center gap-2 px-3 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
             <Plus className="w-4 h-4" /> New Event
           </button>
-          <button
-            onClick={exportICS}
-            className="flex items-center gap-2 px-3 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-          >
+          <button onClick={exportICS}
+            className="flex items-center gap-2 px-3 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
             <Upload className="w-4 h-4" /> Export .ics
           </button>
-          <button
-            onClick={syncToOutlook}
-            className="flex items-center gap-2 px-3 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-          >
+          <button onClick={syncToOutlook}
+            className="flex items-center gap-2 px-3 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
             <CalendarDays className="w-4 h-4 text-blue-600" /> Sync to Outlook
           </button>
-          <button
-            onClick={handleSyncToGoogle}
-            disabled={syncing}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-400 hover:bg-amber-500 text-slate-900 text-sm font-bold rounded-xl transition-colors disabled:opacity-50"
-          >
+          <button onClick={handleSyncToGoogle} disabled={syncing}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-400 hover:bg-amber-500 text-slate-900 text-sm font-bold rounded-xl transition-colors disabled:opacity-50">
             {syncing ? <RefreshCw className="w-4 h-4 animate-spin" /> :
               syncDone ? <CheckCircle className="w-4 h-4" /> :
               <CalendarDays className="w-4 h-4" />}
@@ -204,7 +168,6 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* Legend */}
       <div className="flex items-center gap-4 flex-wrap">
         {[
           { color: "bg-teal-500", label: "Order Delivery" },
@@ -219,7 +182,6 @@ export default function CalendarPage() {
         ))}
       </div>
 
-      {/* New Event Form */}
       {showNewEvent && (
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-4">
           <h4 className="font-semibold text-slate-800 dark:text-slate-100 text-sm mb-3">Create New Event</h4>
@@ -251,14 +213,13 @@ export default function CalendarPage() {
                 className="px-4 py-2 border border-slate-200 text-slate-600 text-sm rounded-xl hover:bg-slate-50">Cancel</button>
               <button type="submit" disabled={saving}
                 className="px-4 py-2 bg-amber-400 hover:bg-amber-500 text-slate-900 text-sm font-bold rounded-xl disabled:opacity-50">
-                {saving ? "Saving..." : "Add to Calendar & Google"}
+                {saving ? "Saving..." : "Add to Calendar"}
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* Main Grid + Sidebar */}
       <div className="grid lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2">
           {loading ? (
@@ -267,7 +228,6 @@ export default function CalendarPage() {
             <CalendarGrid events={events} onDayClick={handleDayClick} />
           )}
         </div>
-        {/* Desktop sidebar hint (mobile uses bottom sheet from EventSidebar) */}
         <div className="hidden lg:block">
           {selectedDay ? (
             <EventSidebar selectedDay={selectedDay} events={selectedEvents} onClose={() => setSelectedDay(null)} />
@@ -281,7 +241,6 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* Mobile bottom sheet rendered outside grid */}
       <div className="lg:hidden">
         {selectedDay && (
           <EventSidebar selectedDay={selectedDay} events={selectedEvents} onClose={() => setSelectedDay(null)} />
