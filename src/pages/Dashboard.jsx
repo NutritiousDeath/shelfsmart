@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
+import { ProductEntity, FlashSaleEntity } from '@/hooks/useEntities';;
 import { Package, AlertTriangle, TrendingDown, Zap, ShoppingCart, Clock, ArrowRight, RefreshCw } from "lucide-react";
 import PullToRefresh from "../components/mobile/PullToRefresh";
 import StatCard from "../components/dashboard/StatCard";
@@ -17,14 +18,14 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadData();
-    base44.auth.me().then(setUser);
+    supabase.auth.getUser().then(({data}) => setUser(data.user));
   }, []);
 
   const loadData = async () => {
     setLoading(true);
     const [prods, sales] = await Promise.all([
-      base44.entities.Product.list(),
-      base44.entities.FlashSale.filter({ status: "active" }),
+      ProductEntity.list(),
+      FlashSaleEntity.filter({ status: "active" }),
     ]);
     setProducts(prods);
     setFlashSales(sales);
