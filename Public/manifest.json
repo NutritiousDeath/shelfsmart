@@ -1,0 +1,28 @@
+{
+  "name": "ShelfSmart",
+  "short_name": "ShelfSmart",
+  "description": "AI-powered retail inventory management",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#050810",
+  "theme_color": "#00f0ff",
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
