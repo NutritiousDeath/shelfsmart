@@ -32,48 +32,51 @@ export const AuthProvider = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const loadUserProfile = async (authUser) => {
-    try {
-      // Fetch role and profile from team_members table (your existing custom entity)
-      const { data: member } = await supabase
-        .from('team_members')
-        .select('*')
-        .eq('user_id', authUser.id)
-        .single();
+const loadUserProfile = async (authUser) => {
+  try {
+    const { data: member, error } = await supabase
+      .from('team_members')
+      .select('*')
+      .eq('user_id', authUser.id)
+      .maybeSingle();
 
-      setUser({
-        id: authUser.id,
-        email: authUser.email,
-        full_name: member?.full_name || authUser.email,
-        role: member?.role || 'employee',
-        department: member?.department,
-        sub_department: member?.sub_department,
-        teamMemberId: member?.id,
-      });
-      setIsAuthenticated(true);
-    } catch (err) {
-      // User exists in auth but not in team_members yet — treat as employee
-      setUser({
-        id: authUser.id,
-        email: authUser.email,
-        full_name: authUser.email,
-        role: 'employee',
-      });
-      setIsAuthenticated(true);
-    } finally {
+    if (error || !member) {
+      // If we can't find the team member, sign out completely
+      await supabase.auth.signOut();
+      setUser(null);
+      setIsAuthenticated(false);
       setIsLoadingAuth(false);
+      return;
     }
-  };
+
+    setUser({
+      id: authUser.id,
+      email: authUser.email,
+      full_name: member?.full_name || authUser.email,
+      role: member?.role || 'employee',
+      department: member?.department,
+      sub_department: member?.sub_department,
+      teamMemberId: member?.id,
+    });
+    setIsAuthenticated(true);
+  } catch (err) {
+    await supabase.auth.signOut();
+    setUser(null);
+    setIsAuthenticated(false);
+  } finally {
+    setIsLoadingAuth(false);
+  }
+};
 
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
     setIsAuthenticated(false);
-    window.location.href = '/login';
+    window.location.hash = '/login';
   };
 
   const navigateToLogin = () => {
-    window.location.href = '/login';
+    window.location.hash = '/login';
   };
 
   return (

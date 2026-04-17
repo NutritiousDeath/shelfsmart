@@ -2,32 +2,83 @@ import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 
 export default function StatCard({ icon: Icon, label, value, color = "blue", alert = false, loading, linkTo }) {
-  const colors = {
-    blue: { bg: "bg-blue-50", text: "text-blue-600", icon: "text-blue-500" },
-    amber: { bg: "bg-amber-50", text: "text-amber-700", icon: "text-amber-500" },
-    red: { bg: "bg-red-50", text: "text-red-700", icon: "text-red-500" },
-    orange: { bg: "bg-orange-50", text: "text-orange-700", icon: "text-orange-500" },
-    green: { bg: "bg-green-50", text: "text-green-700", icon: "text-green-500" },
+  const iconColors = {
+    blue:   "#4da6ff",
+    amber:  "var(--primary)",
+    red:    "#ff4444",
+    orange: "#ff8c00",
+    green:  "#00ff88",
   };
 
-  const c = colors[color];
+  const iconColor = iconColors[color] || "var(--primary)";
+  const isAlert = alert && value > 0;
+
   return (
-    <div className={`bg-white dark:bg-slate-800 rounded-2xl p-4 border ${alert && value > 0 ? "border-red-200 dark:border-red-800" : "border-slate-100 dark:border-slate-700"} shadow-sm flex flex-col`}>
-      <div className={`w-10 h-10 ${c.bg} rounded-xl flex items-center justify-center mb-3`}>
-        <Icon className={`w-5 h-5 ${c.icon}`} />
+    <div style={{
+      background: "var(--bg-card)",
+      border: `1px solid ${isAlert ? "rgba(255,68,68,0.3)" : "var(--primary-border)"}`,
+      borderRadius: 4,
+      padding: "1rem",
+      display: "flex",
+      flexDirection: "column",
+    }}>
+      {/* Icon */}
+      <div style={{
+        width: 40, height: 40, borderRadius: 4, marginBottom: "0.75rem",
+        background: "var(--primary-dim)",
+        border: "1px solid var(--primary-border)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        color: iconColor,
+      }}>
+        <Icon size={18} />
       </div>
+
+      {/* Value */}
       {loading ? (
-        <div className="h-8 bg-slate-100 rounded animate-pulse w-16 mb-1" />
+        <div style={{ height: 28, background: "rgba(74,80,104,0.2)", borderRadius: 3, width: 48, marginBottom: 4, animation: "ss-pulse 1.5s infinite" }} />
       ) : (
-        <p className={`text-2xl font-bold ${alert && value > 0 ? c.text : "text-slate-800 dark:text-slate-100"}`}>{value}</p>
+        <p style={{
+          fontFamily: "var(--font-display)",
+          fontSize: "1.5rem",
+          fontWeight: 700,
+          color: isAlert ? "#ff4444" : "var(--white)",
+          lineHeight: 1.2,
+        }}>{value}</p>
       )}
-      <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5 flex-1">{label}</p>
+
+      {/* Label */}
+      <p style={{
+        fontFamily: "var(--font-mono)",
+        fontSize: "0.65rem",
+        letterSpacing: "1px",
+        color: "var(--grey)",
+        marginTop: 4,
+        flex: 1,
+      }}>{label}</p>
+
+      {/* Link */}
       {linkTo && (
         <Link
           to={linkTo}
-          className={`mt-3 flex items-center justify-center gap-1 text-xs font-medium py-1.5 rounded-lg transition-colors ${c.bg} ${c.text} hover:opacity-80`}
+          style={{
+            marginTop: "0.75rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 4,
+            fontFamily: "var(--font-mono)",
+            fontSize: "0.65rem",
+            letterSpacing: "1px",
+            color: "var(--primary)",
+            padding: "6px 0",
+            borderTop: "1px solid var(--primary-border)",
+            textDecoration: "none",
+            transition: "opacity 0.15s",
+          }}
+          onMouseEnter={e => e.currentTarget.style.opacity = 0.7}
+          onMouseLeave={e => e.currentTarget.style.opacity = 1}
         >
-          View <ArrowRight className="w-3 h-3" />
+          VIEW <ArrowRight size={11} />
         </Link>
       )}
     </div>
