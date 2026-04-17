@@ -544,7 +544,7 @@ For more information, see https://radix-ui.com/primitives/docs/components/${t.do
         .ss-logout-btn:hover,.ss-logout-btn:active{color:#ff4444;border-color:#ff4444;background:rgba(255,68,68,0.1);}
 
         .ss-main{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;}
-        .ss-header{display:flex;align-items:center;gap:0.75rem;padding:0 1rem;background:rgba(5,8,16,0.96);border-bottom:1px solid var(--primary-border);position:sticky;top:0;z-index:10;backdrop-filter:blur(12px);min-height:52px;padding-top:var(--safe-top);}
+        .ss-header{display:flex;align-items:center;gap:0.75rem;padding:0 1rem;background:rgba(5,8,16,0.96);border-bottom:1px solid var(--primary-border);position:sticky;top:0;z-index:10;backdrop-filter:blur(12px);min-height:52px;}
         .ss-header-btn{width:40px;height:40px;border-radius:4px;flex-shrink:0;background:var(--primary-dim);border:1px solid var(--primary-border);color:var(--primary);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent;}
         .ss-header-btn:active{transform:scale(0.9);box-shadow:var(--primary-glow);}
         .ss-header-title{flex:1;font-family:var(--font-display);font-size:0.74rem;font-weight:700;letter-spacing:3px;color:var(--white);}
